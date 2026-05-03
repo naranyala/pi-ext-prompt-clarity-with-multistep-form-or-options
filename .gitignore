@@ -1,0 +1,46 @@
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+.pytest_cache/
+.mypy_cache/
+.tox/
+.coverage
+htmlcov/
+
+# Rust
+target/
+# Cargo.lock is typically committed for executables, 
+# but can be ignored if you want to always use latest compatible versions.
+# For a CLI, it's better to commit it.
+
+# Node.js / Bun / TypeScript
+node_modules/
+dist/
+build/
+.bun/
+*.log
+.npm/
+.eslintcache
+.biome/
+*.tsbuildinfo
+
+# IDEs
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Project specific
+security-audit.log
+.pi-markdown-cache.json
