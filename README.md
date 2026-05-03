@@ -33,7 +33,7 @@
 The fastest way to add this capability to your Pi agent:
 
 ```bash
-pi install git:https://github.com/yourusername/pi-ext-prompt-clarity
+pi install git:github.com/naranyala/pi-ext-prompt-clarity-with-multistep-form-or-options
 ```
 
 ### How to Use
