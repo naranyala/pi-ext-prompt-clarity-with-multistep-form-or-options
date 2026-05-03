@@ -119,6 +119,150 @@ describe("QuestionnaireUI", () => {
     expect(result.answers[0].wasCustom).toBe(true);
   });
 
+  it("should handle multiple questions and submission", async () => {
+    const ui = new QuestionnaireUI(mockCtx);
+    const questions = [
+      createSimpleQuestion("q1", "single"),
+      createSimpleQuestion("q2", "single"),
+    ];
+    
+    const result = await runWithSimulatedInputs(ui, questions, [
+      Key.down, Key.enter, // q1
+      Key.down, Key.enter, // q2
+      Key.enter            // submit tab
+    ]);
+    
+    expect(result.cancelled).toBe(false);
+    expect(result.answers).toHaveLength(2);
+    expect(result.answers[0].values).toEqual(["opt2"]);
+    expect(result.answers[1].values).toEqual(["opt2"]);
+  });
+
+  it("should handle multi-select toggle and multiple values", async () => {
+    const ui = new QuestionnaireUI(mockCtx);
+    const questions = [createSimpleQuestion("q1", "multiple")];
+    
+    // Select opt1, Select opt2, Deselect opt1, Tab to submit, Enter
+    const result = await runWithSimulatedInputs(ui, questions, [
+      Key.enter, // select opt1
+      Key.down, Key.enter, // select opt2
+      Key.up, Key.enter, // deselect opt1
+      Key.tab, // move to submit
+      Key.enter // submit
+    ]);
+    
+    expect(result.cancelled).toBe(false);
+    expect(result.answers[0].values).toEqual(["opt2"]);
+  });
+
+  it("should handle tab navigation between questions", async () => {
+    const ui = new QuestionnaireUI(mockCtx);
+    const questions = [
+      createSimpleQuestion("q1"),
+      createSimpleQuestion("q2"),
+    ];
+    
+    // Select q1, Tab to q2, Select q2, Tab to submit, Enter
+    const result = await runWithSimulatedInputs(ui, questions, [
+      Key.enter, // q1 opt1
+      Key.tab,   // move to q2
+      Key.enter, // q2 opt1
+      Key.tab,   // move to submit
+      Key.enter  // submit
+    ]);
+    
+    expect(result.cancelled).toBe(false);
+    expect(result.answers).toHaveLength(2);
+  });
+
+  it("should block submission if some questions are unanswered", async () => {
+    const ui = new QuestionnaireUI(mockCtx);
+    const questions = [
+      createSimpleQuestion("q1"),
+      createSimpleQuestion("q2"),
+    ];
+    
+    // Select q1, Tab to submit, Enter (q2 is unanswered)
+    // Since it's a mock and doesn't actually "block" rendering, 
+    // we check if done is called. In our mock, if Key.enter is pressed 
+    // on submit tab and allAnswered() is false, it just does nothing.
+    
+    let resolver: (value: any) => void;
+    const resultPromise = new Promise((resolve) => {
+      resolver = resolve;
+    });
+
+    mockCtx.ui.custom = vi.fn(async (handler) => {
+      const mockTui = { terminal: { rows: 40, cols: 80 }, requestRender: vi.fn() };
+      const done = (res: any) => resolver(res);
+      const state = handler(mockTui, mockCtx.ui.theme, {}, done);
+      
+      state.handleInput(Key.enter); // answer q1
+      state.handleInput(Key.tab);   // move to submit
+      state.handleInput(Key.enter); // try to submit
+      
+      return resultPromise;
+    });
+
+    // This should timeout if we just await it, so we wrap in a timeout
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 100));
+    
+    await expect(Promise.race([ui.run(questions), timeoutPromise])).rejects.toThrow("Timeout");
+  });
+
+  it("should handle Esc in input mode", async () => {
+    const ui = new QuestionnaireUI(mockCtx);
+    const questions = [createSimpleQuestion("q1")];
+    
+    // Select 'Type something', then press Esc
+    // In current implementation, Esc in inputMode calls refresh() and set inputMode = false.
+    // To verify, we can see if it's still in questionnaire and didn't cancel.
+    
+    const result = await runWithSimulatedInputs(ui, questions, [
+      Key.down, Key.down, Key.enter, // enter input mode
+      Key.escape, // exit input mode
+      Key.enter // select 'Type something' again and submit
+    ], () => {
+      if (capturedOnSubmit) {
+        capturedOnSubmit("Actual answer");
+      }
+    });
+    
+    expect(result.cancelled).toBe(false);
+    expect(result.answers[0].values).toEqual(["Actual answer"]);
+  });
+
+  it("should handle empty custom answer", async () => {
+    const ui = new QuestionnaireUI(mockCtx);
+    const questions = [createSimpleQuestion("q1")];
+    
+    const result = await runWithSimulatedInputs(ui, questions, [
+      Key.down, Key.down, Key.enter, // enter input mode
+    ], () => {
+      if (capturedOnSubmit) {
+        capturedOnSubmit("   "); // empty string
+      }
+    });
+    
+    expect(result.answers[0].values).toEqual(["(no response)"]);
+  });
+
+  it("should respect allowOther: false", async () => {
+    const ui = new QuestionnaireUI(mockCtx);
+    const questions = [{
+      id: "q1",
+      label: "Q1",
+      prompt: "Prompt",
+      options: [{ value: "v1", label: "L1" }],
+      allowOther: false,
+      mode: 'single'
+    } as any];
+    
+    const result = await runWithSimulatedInputs(ui, questions, [Key.enter]);
+    expect(result.cancelled).toBe(false);
+    expect(result.answers[0].values).toEqual(["v1"]);
+  });
+
   it("should handle cancellation", async () => {
     const ui = new QuestionnaireUI(mockCtx);
     const questions = [createSimpleQuestion("q1")];

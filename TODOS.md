@@ -10,14 +10,15 @@ Bridge the gap between vague user intent and precise execution by providing a dy
 ### ✅ Strengths (What Works)
 - **TUI-Native Interaction**: High-fidelity use of `ctx.ui.custom` for terminal-native UX.
 - **Reusable UI Engine**: The `QuestionnaireUI` class provides a generic, scalable way to build multi-step forms with support for single/multiple selection.
-- **LLM-Driven UI**: Use of `typebox` allows the agent to dynamically design the questionnaire structure.
+- **Semantic Intelligence**: Uses LLM-powered analysis to identify missing dimensions (Scope, Tech, etc.) rather than just keyword matching.
+- **Dynamic Questioning**: Generates context-aware, tailored questionnaires on the fly via the `PromptClarityAnalyzer`.
 - **Hybrid Input**: Combines rapid selection with free-text input via a built-in TUI Editor.
 - **Wizard Pattern**: Tabbed navigation manages cognitive load during multi-question sessions.
 - **Proactive Guidance**: Integrated `AmbiguityDetector` and `PromptClaritySkill` to steer the agent towards clarification.
+- **Robustness**: High resistance to emoji-bombs, unicode attacks, and LLM-induced malformed JSON.
 
 ### ⚠️ Challenges (Potential Bugs & Technical Debt)
 - **Logic Duplication**: `PromptClarityHandlers` currently implements its own internal questionnaire loop instead of utilizing the `QuestionnaireUI` abstraction, leading to redundant code and inconsistent behavior.
-- **Heuristic Limitations**: Ambiguity detection relies on basic heuristics; lacks a sophisticated "Vagueness Scoring" engine.
 - **Statelessness**: Clarifications are not persisted; the agent may ask the same questions in subsequent turns if the context is lost.
 - **Command Bridge**: The `/clarify` command relies on a system prompt injection to "nudge" the agent; it is not a direct programmatic trigger.
 
@@ -33,7 +34,8 @@ Bridge the gap between vague user intent and precise execution by providing a dy
 - [x] Implement `before_agent_start` hook for ambiguity detection.
 - [x] Implement logic for the `/clarify` command.
 - [x] Create `PromptClaritySkill` to bind results as hard constraints in the agent's reasoning.
-- [ ] Develop a "Vagueness Scoring" heuristic to determine the *level* of intervention needed.
+- [x] Develop "Semantic Analysis" engine to replace basic heuristics.
+- [x] Implement "Smart Mode" for dynamic question generation.
 
 ### 🟩 Phase 3: Ecosystem Integration
 - [ ] **Clarification Memory**: Use `Store` to persist clarified preferences across the session.
@@ -58,6 +60,8 @@ Bridge the gap between vague user intent and precise execution by providing a dy
 - **TUI Interactivity**: `ctx.ui.custom` for questionnaires is stable.
 - **Intent Interception**: `api.on("before_agent_start", ...)` is a reliable pattern for guiding the agent.
 - **Tool Integration**: `clarify_prompt` is correctly registered and callable.
+- **Semantic Analysis**: LLM-based dimension detection is accurate.
+- **Stress Resistance**: Resilient against garbage input and malformed LLM responses.
 
 ### ⚠️ Potential Limitations (Medium Risk)
 - **UI Overflow**: While scrolling is implemented, extremely complex questionnaires with nested descriptions may still challenge the TUI layout.

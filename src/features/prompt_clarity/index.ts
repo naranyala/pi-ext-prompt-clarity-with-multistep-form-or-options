@@ -10,36 +10,10 @@ import { Type } from "@sinclair/typebox";
 import type { Services } from "../../core/services";
 import { AmbiguityDetector } from "./ambiguity-detector";
 import { PromptClaritySkill } from "./skill";
+import { PromptClarityAnalyzer } from "./analyzer";
+import type { Question, Answer, QuestionnaireResult, QuestionOption } from "./types";
 
 // --- Types ---
-
-interface QuestionOption {
-	value: string;
-	label: string;
-	description?: string;
-}
-
-interface Question {
-	id: string;
-	label: string;
-	prompt: string;
-	options: QuestionOption[];
-	allowOther: boolean;
-}
-
-interface Answer {
-	id: string;
-	value: string;
-	label: string;
-	wasCustom: boolean;
-	index?: number;
-}
-
-interface QuestionnaireResult {
-	questions: Question[];
-	answers: Answer[];
-	cancelled: boolean;
-}
 
 const QuestionOptionSchema = Type.Object({
 	value: Type.String({ description: "The value returned when selected" }),
@@ -57,6 +31,7 @@ const QuestionSchema = Type.Object({
 	prompt: Type.String({ description: "The full question text to display" }),
 	options: Type.Array(QuestionOptionSchema, { description: "Available options to choose from" }),
 	allowOther: Type.Optional(Type.Boolean({ description: "Allow 'Type something' option (default: true)" })),
+    mode: Type.Optional(Type.Union([Type.Literal('single'), Type.Literal('multiple')]), { default: 'single' }),
 });
 
 const ClarificationWizardParams = Type.Object({
@@ -80,6 +55,7 @@ export class PromptClarityHandlers {
 
 	register() {
 		const { api, logger } = this.services;
+		const analyzer = new PromptClarityAnalyzer(api);
 
 		// Register Ambiguity Detector
 		const detector = new AmbiguityDetector(api);
@@ -102,15 +78,29 @@ export class PromptClarityHandlers {
 				if (!ctx.hasUI) {
 					return errorResult("Error: UI not available (running in non-interactive mode)");
 				}
-				if (params.questions.length === 0) {
-					return errorResult("Error: No questions provided");
+
+				let questions: Question[] = [];
+
+				if (params.questions && params.questions.length > 0) {
+					questions = params.questions.map((q, i) => ({
+						...q,
+						label: q.label || `Q${i + 1}`,
+						allowOther: q.allowOther !== false,
+						mode: q.mode || 'single'
+					}));
+				} else {
+					// SMART MODE: Generate questions based on semantic analysis
+					const lastPrompt = (ctx as any).lastPrompt || "";
+					if (!lastPrompt) {
+						return errorResult("Error: No prompt available to analyze.");
+					}
+					const report = await analyzer.analyze(lastPrompt);
+					questions = await this.generateQuestionsFromReport(report, ctx);
 				}
 
-				const questions: Question[] = params.questions.map((q, i) => ({
-					...q,
-					label: q.label || `Q${i + 1}`,
-					allowOther: q.allowOther !== false,
-				}));
+				if (questions.length === 0) {
+					return errorResult("Error: Could not generate any clarifying questions.");
+				}
 
 				return await this.runQuestionnaire(questions, ctx);
 			},
@@ -131,6 +121,57 @@ export class PromptClarityHandlers {
 				});
 			}
 		});
+	}
+
+	private async generateQuestionsFromReport(report: any, ctx: any): Promise<Question[]> {
+		// We use the agent's LLM to generate high-quality, context-aware questions
+		// based on the identified ambiguity dimensions.
+		const prompt = `The user's prompt was identified as ambiguous in the following areas: ${report.dimensions.join(", ")}.
+		Please generate a set of 2-3 structured clarifying questions for the user.
+		The questions should be concise and easy to answer.
+		
+		Return ONLY a JSON array of Question objects following this schema:
+		{
+			"id": "string (unique)",
+			"label": "string (short title)",
+			"prompt": "string (the actual question text)",
+			"options": [
+				{ "value": "string", "label": "string", "description": "string (optional)" }
+			],
+			"allowOther": boolean,
+			"mode": "single" | "multiple"
+		}`;
+
+		try {
+			const response = await (ctx.api as any).chat({
+				systemPrompt: "You are a UX designer specializing in conversational interfaces. Your goal is to generate structured questions to resolve user ambiguity.",
+				userPrompt: `${prompt}\n\nUser's original prompt: "${(ctx as any).lastPrompt}"`
+			});
+
+			const questions: any[] = typeof response === 'string' ? JSON.parse(response) : response;
+			
+			return questions.map(q => ({
+				id: q.id,
+				label: q.label,
+				prompt: q.prompt,
+				options: q.options || [],
+				allowOther: q.allowOther ?? true,
+				mode: q.mode || 'single'
+			}));
+		} catch (error) {
+			console.error("Failed to generate questions from report:", error);
+			// Fallback: Generic questions if LLM fails
+			return [
+				{
+					id: "gen_1",
+					label: "Scope",
+					prompt: "Could you please provide more details about the scope of this request?",
+					options: [{ value: "full", label: "Entire project" }, { value: "part", label: "Specific part" }],
+					allowOther: true,
+					mode: "single"
+				}
+			];
+		}
 	}
 
 	private async runQuestionnaire(questions: Question[], ctx: ExtensionContext): Promise<any> {

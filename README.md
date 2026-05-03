@@ -8,17 +8,20 @@
 
 ## ✨ Key Features
 
+### 🧠 Semantic Intelligence (Smart Mode)
+- **Semantic Ambiguity Analysis**: Moves beyond simple keyword matching to understand *why* a prompt is vague (e.g., missing technology, scope, format, or context) using LLM-powered reasoning.
+- **Dynamic Question Generation**: Automatically synthesizes tailored, context-aware questionnaires on the fly based on the detected ambiguity dimensions.
+- **Proactive Guidance**: Integrated hooks that analyze user prompts before the agent starts, suggesting the need for clarification.
+
 ### 🛠️ Interactive Clarification Wizard
 - **Multi-Step Forms**: Support for complex, multi-question sequences with tabbed navigation to reduce cognitive load.
-- **Dynamic UI Generation**: The agent uses `TypeBox` to define the structure of the questionnaire on the fly, tailoring the questions to the specific ambiguity detected.
 - **Hybrid Input Modalities**:
     - **Rapid Selection**: Radio-style options for quick decisions.
     - **Multi-Select**: Checkbox-style options for choosing multiple constraints.
     - **Deep Input**: A built-in TUI editor for free-text, detailed responses.
 
-### 🎯 Intelligence & Guidance
-- **Proactive Ambiguity Detection**: Integrated hooks that analyze user prompts before the agent starts, suggesting the need for clarification.
-- **Hard Constraint Injection**: Results from the wizard are not just "chat history"—they are injected as hard constraints into the agent's reasoning process via the `PromptClaritySkill`.
+### 🎯 Hard Constraint Enforcement
+- **Prompt Clarity Skill**: Results from the wizard are not just "chat history"—they are injected as **hard constraints** into the agent's reasoning process via the `PromptClaritySkill`.
 - **Command Bridge**: Quick access via the `/clarify` command to manually trigger the wizard for the last prompt.
 
 ---
@@ -57,18 +60,24 @@ The heart of the extension is a reusable TUI engine that abstracts the complexit
 - **Adaptive Rendering**: Dynamic line truncation and scrolling for long lists.
 - **Event Routing**: Mapping terminal key-presses to application actions.
 
-### 🛡️ Type Safety
-By using `@sinclair/typebox`, the extension ensures that the parameters passed from the LLM to the UI are strictly validated, preventing runtime crashes during complex form generation.
+### 🛡️ Robustness & Testing
+We maintain a rigorous testing standard, including:
+- **Adversarial Input Testing**: Protecting against emoji bombs, unicode attacks, and massive payloads.
+- **LLM Resilience Testing**: Ensuring the extension handles malformed JSON and hallucinations gracefully.
 
 ---
 
 ## 🛠️ Development
 
 ### Running Tests
-We maintain a comprehensive suite of unit and integration tests to ensure the wizard's stability.
+We maintain a comprehensive suite of unit, integration, and stress tests.
 
 ```bash
+# Run all tests
 bun test
+
+# Run specific stress tests
+bun test tests/stress/input_chaos.test.ts
 ```
 
 ### Linting & Formatting
