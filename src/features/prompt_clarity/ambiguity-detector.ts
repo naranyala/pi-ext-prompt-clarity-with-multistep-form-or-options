@@ -1,7 +1,5 @@
 import type { ExtensionContext, ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { VaguenessDimension, type AmbiguityReport } from "./types";
-import { execSync } from "child_process";
-import path from "path";
 
 export class AmbiguityDetector {
     constructor(private readonly api: ExtensionAPI) {}
@@ -9,7 +7,7 @@ export class AmbiguityDetector {
     register() {
         this.api.on("input", (event, ctx) => {
             const report = this.analyzeAmbiguity(event.text);
-            
+             
             if (report.score >= 0.8) {
                 ctx.ui.notify(
                     `Your prompt is very vague (${report.dimensions.join(", ")}). I strongly recommend using /clarify.`, 
@@ -30,28 +28,16 @@ export class AmbiguityDetector {
     }
 
     /**
-     * Analyzes the input for vagueness score and dimensions using the Rust CLI engine,
-     * falling back to TypeScript heuristics if the CLI fails.
+     * Analyzes the input for vagueness score and dimensions using TypeScript heuristics.
+     * Rust CLI integration is disabled - to re-enable, uncomment the block below.
      */
     public analyzeAmbiguity(text: string): AmbiguityReport {
-        try {
-            const cliPath = path.join(process.cwd(), "cli-rs", "target", "release", "pi-clarity-cli");
-            const output = execSync(
-                `"${cliPath}" score --text ${JSON.stringify(text)}`, 
-                { encoding: 'utf8' }
-            );
-
-            const parsed = JSON.parse(output);
-
-            return {
-                score: parsed.score ?? 0,
-                dimensions: (parsed.dimensions || []).map((d: string) => d as VaguenessDimension),
-                isAmbiguous: (parsed.score ?? 0) >= 0.2
-            };
-        } catch (error) {
-            console.warn("Rust ambiguity detector failed, falling back to TypeScript heuristics:", error);
-            return this.analyzeAmbiguityTS(text);
-        }
+        // Rust CLI integration disabled - using TypeScript heuristics only
+        // To re-enable Rust CLI:
+        // 1. Uncomment the try-catch block below
+        // 2. Re-add imports: import { execSync } from "child_process"; import path from "path";
+        
+        return this.analyzeAmbiguityTS(text);
     }
 
     /**

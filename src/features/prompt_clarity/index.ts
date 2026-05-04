@@ -67,9 +67,9 @@ export class PromptClarityHandlers {
 			const report = detector.analyzeAmbiguity(event.systemPrompt || "");
 			
 			let nudge = "";
-			if (report.score >= 0.4) {
+			if (report.score >= 0.8) {
 				nudge = `\n\n⚠️ SYSTEM NOTICE: The current prompt is highly ambiguous in [${report.dimensions.join(", ")}]. Please use the 'clarify_prompt' tool before proceeding.`;
-			} else if (report.score >= 0.2) {
+			} else if (report.score >= 0.4) {
 				nudge = `\n\n💡 TIP: This prompt may be slightly vague. Consider using 'clarify_prompt' to ensure the best result.`;
 			}
 

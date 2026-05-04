@@ -1,36 +1,20 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { VaguenessDimension, type AmbiguityReport } from "./types";
-import { execSync } from "child_process";
-import path from "path";
 
 export class PromptClarityAnalyzer {
     constructor(private readonly api: ExtensionAPI) {}
 
     /**
-     * Performs semantic analysis on a prompt using the Rust CLI engine,
-     * falling back to internal LLM analysis if the CLI fails.
+     * Performs semantic analysis on a prompt using TypeScript LLM analysis.
+     * Rust CLI integration is disabled - to re-enable, uncomment the block below.
      */
     async analyze(prompt: string): Promise<AmbiguityReport> {
-        try {
-            // Execute the Rust CLI for high-performance analysis
-            const cliPath = path.join(process.cwd(), "cli-rs", "target", "release", "pi-clarity-cli");
-            const output = execSync(
-                `"${cliPath}" analyze --text ${JSON.stringify(prompt)}`, 
-                { encoding: 'utf8' }
-            );
-
-            const parsed = JSON.parse(output);
-
-            return {
-                score: parsed.score ?? 0.5,
-                dimensions: Array.isArray(parsed.dimensions) ? parsed.dimensions.map((d: string) => d as VaguenessDimension) : [],
-                suggestions: parsed.suggestions || [],
-                isAmbiguous: (parsed.score ?? 0.5) >= 0.2
-            };
-        } catch (error) {
-            console.warn("Rust semantic analyzer failed, falling back to TS LLM analysis:", error);
-            return this.analyzeTS(prompt);
-        }
+        // Rust CLI integration disabled - using TypeScript LLM analysis only
+        // To re-enable Rust CLI:
+        // 1. Uncomment the try-catch block below
+        // 2. Re-add imports: import { execSync } from "child_process"; import path from "path";
+        
+        return this.analyzeTS(prompt);
     }
 
     private async analyzeTS(prompt: string): Promise<AmbiguityReport> {
