@@ -18,7 +18,7 @@ describe("Core Service: SystemToolService", () => {
 
   describe("exists()", () => {
     it("should return true when tool is found in PATH", async () => {
-      const mockExec = api.exec as vi.SpiedFunction<any>;
+      const mockExec = api.exec as any<any>;
       mockExec.mockClear?.();
       mockExec.mockResolvedValue({
         stdout: "/usr/bin/node",
@@ -33,7 +33,7 @@ describe("Core Service: SystemToolService", () => {
     });
 
     it("should return false when tool is not found in PATH", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "command not found",
         exitCode: 1,
@@ -47,7 +47,7 @@ describe("Core Service: SystemToolService", () => {
 
   describe("findPath()", () => {
     it("should return the path when tool is found", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "/usr/local/bin/git  \n",
         stderr: "",
         exitCode: 0,
@@ -59,7 +59,7 @@ describe("Core Service: SystemToolService", () => {
     });
 
     it("should return null when tool is not found", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "",
         exitCode: 1,
@@ -71,7 +71,7 @@ describe("Core Service: SystemToolService", () => {
     });
 
     it("should trim whitespace from the path", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "  /bin/ls  \n",
         stderr: "",
         exitCode: 0,
@@ -85,7 +85,7 @@ describe("Core Service: SystemToolService", () => {
 
   describe("ensure()", () => {
     it("should not throw when tool exists", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "/usr/bin/python",
         stderr: "",
         exitCode: 0,
@@ -95,7 +95,7 @@ describe("Core Service: SystemToolService", () => {
     });
 
     it("should throw with default message when tool is missing", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "",
         exitCode: 1,
@@ -107,7 +107,7 @@ describe("Core Service: SystemToolService", () => {
     });
 
     it("should throw with custom error message when provided", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "",
         exitCode: 1,
@@ -119,7 +119,7 @@ describe("Core Service: SystemToolService", () => {
     });
 
     it("should include tool name in custom error message", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "",
         exitCode: 1,

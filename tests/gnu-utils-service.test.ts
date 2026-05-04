@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from "bun:test";
+import { describe, expect, it, beforeEach, mock } from "bun:test";
 import { GnuUtilsService } from "../src/core/gnu-utils-service";
 import { ShellService } from "../src/core/shell-service";
 import { SystemToolService } from "../src/core/system-tool-service";
@@ -17,9 +17,9 @@ describe("Core Service: GnuUtilsService", () => {
 
     // Mock SystemToolService to always return true for exists()
     const mockSystemToolService = {
-      exists: vi.fn().mockResolvedValue(true),
-      findPath: vi.fn().mockResolvedValue(null),
-      ensure: vi.fn().mockResolvedValue(undefined),
+      exists: mock().mockResolvedValue(true),
+      findPath: mock().mockResolvedValue(null),
+      ensure: mock().mockResolvedValue(undefined),
     } as any;
 
     gnuUtilsService = new GnuUtilsService(shellService, mockSystemToolService);
@@ -27,7 +27,7 @@ describe("Core Service: GnuUtilsService", () => {
 
   describe("grep()", () => {
     it("should search for a pattern in a file", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "line 1: match\nline 2: match\n",
         stderr: "",
         exitCode: 0,
@@ -39,7 +39,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should return empty array when grep finds no matches", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "",
         exitCode: 1,
@@ -51,7 +51,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should use -r flag for recursive search", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "",
         exitCode: 0,
@@ -63,7 +63,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should use -i flag for case-insensitive search", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "",
         exitCode: 0,
@@ -75,7 +75,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should combine -r and -i flags", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "",
         exitCode: 0,
@@ -87,7 +87,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should filter out empty lines from results", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "match\n\nmatch\n\n",
         stderr: "",
         exitCode: 0,
@@ -101,7 +101,7 @@ describe("Core Service: GnuUtilsService", () => {
 
   describe("find()", () => {
     it("should find files matching a pattern", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "./src/index.ts\n./tests/index.test.ts\n",
         stderr: "",
         exitCode: 0,
@@ -113,7 +113,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should return empty array when no files match", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "",
         exitCode: 1,
@@ -125,7 +125,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should filter out empty lines from results", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "file1.ts\n\nfile2.ts\n\n",
         stderr: "",
         exitCode: 0,
@@ -139,7 +139,7 @@ describe("Core Service: GnuUtilsService", () => {
 
   describe("replaceInFile()", () => {
     it("should replace text in a file using sed", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "",
         exitCode: 0,
@@ -152,7 +152,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should return false when sed fails", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "sed: no input file",
         exitCode: 1,
@@ -166,7 +166,7 @@ describe("Core Service: GnuUtilsService", () => {
 
   describe("count()", () => {
     it("should count lines by default", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "42 file.txt",
         stderr: "",
         exitCode: 0,
@@ -179,7 +179,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should count words", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "150 file.txt",
         stderr: "",
         exitCode: 0,
@@ -192,7 +192,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should count bytes", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "1024 file.txt",
         stderr: "",
         exitCode: 0,
@@ -205,7 +205,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should return 0 when wc fails", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "",
         stderr: "file not found",
         exitCode: 1,
@@ -217,7 +217,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should parse only the number from wc output", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "100  file.txt",
         stderr: "",
         exitCode: 0,
@@ -229,7 +229,7 @@ describe("Core Service: GnuUtilsService", () => {
     });
 
     it("should handle multi-digit numbers", async () => {
-      (api.exec as vi.SpiedFunction<any>).mockResolvedValue({
+      (api.exec as any<any>).mockResolvedValue({
         stdout: "12345 file.txt",
         stderr: "",
         exitCode: 0,

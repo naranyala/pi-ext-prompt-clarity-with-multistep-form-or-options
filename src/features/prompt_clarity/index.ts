@@ -63,9 +63,18 @@ export class PromptClarityHandlers {
 
 		// Register Prompt Clarity Skill (Constraint Injection)
 		const skill = new PromptClaritySkill();
-		api.on("before_agent_start", (event) => {
+		api.on("before_agent_start", (event, ctx) => {
+			const report = detector.analyzeAmbiguity(event.systemPrompt || "");
+			
+			let nudge = "";
+			if (report.score >= 0.4) {
+				nudge = `\n\n⚠️ SYSTEM NOTICE: The current prompt is highly ambiguous in [${report.dimensions.join(", ")}]. Please use the 'clarify_prompt' tool before proceeding.`;
+			} else if (report.score >= 0.2) {
+				nudge = `\n\n💡 TIP: This prompt may be slightly vague. Consider using 'clarify_prompt' to ensure the best result.`;
+			}
+
 			return {
-				systemPrompt: event.systemPrompt + "\n\n" + skill.getInstructions(),
+				systemPrompt: event.systemPrompt + nudge + "\n\n" + skill.getInstructions(),
 			};
 		});
 
@@ -124,54 +133,32 @@ export class PromptClarityHandlers {
 	}
 
 	private async generateQuestionsFromReport(report: any, ctx: any): Promise<Question[]> {
-		// We use the agent's LLM to generate high-quality, context-aware questions
-		// based on the identified ambiguity dimensions.
-		const prompt = `The user's prompt was identified as ambiguous in the following areas: ${report.dimensions.join(", ")}.
-		Please generate a set of 2-3 structured clarifying questions for the user.
-		The questions should be concise and easy to answer.
-		
-		Return ONLY a JSON array of Question objects following this schema:
-		{
-			"id": "string (unique)",
-			"label": "string (short title)",
-			"prompt": "string (the actual question text)",
-			"options": [
-				{ "value": "string", "label": "string", "description": "string (optional)" }
-			],
-			"allowOther": boolean,
-			"mode": "single" | "multiple"
-		}`;
-
-		try {
-			const response = await (ctx.api as any).chat({
-				systemPrompt: "You are a UX designer specializing in conversational interfaces. Your goal is to generate structured questions to resolve user ambiguity.",
-				userPrompt: `${prompt}\n\nUser's original prompt: "${(ctx as any).lastPrompt}"`
-			});
-
-			const questions: any[] = typeof response === 'string' ? JSON.parse(response) : response;
-			
-			return questions.map(q => ({
-				id: q.id,
-				label: q.label,
-				prompt: q.prompt,
-				options: q.options || [],
-				allowOther: q.allowOther ?? true,
-				mode: q.mode || 'single'
-			}));
-		} catch (error) {
-			console.error("Failed to generate questions from report:", error);
-			// Fallback: Generic questions if LLM fails
-			return [
-				{
-					id: "gen_1",
-					label: "Scope",
-					prompt: "Could you please provide more details about the scope of this request?",
-					options: [{ value: "full", label: "Entire project" }, { value: "part", label: "Specific part" }],
-					allowOther: true,
-					mode: "single"
-				}
-			];
+		// We use the prescriptive suggestions from the Rust engine to create 
+		// grounded, evidence-based questions.
+		if (!report.suggestions || report.suggestions.length === 0) {
+			return [];
 		}
+
+		return report.suggestions.map((s: any, i: number) => {
+			// Create a prompt based on the evidence provided by the Rust engine
+			const evidencePrefix = s.evidence 
+				? `Note: ${s.evidence}\n\n` 
+				: `Regarding the ${s.dimension} of your request: `;
+			
+			const prompt = `${evidencePrefix}What ${s.label.toLowerCase()} should be used?`;
+
+			return {
+				id: `clarify_${s.dimension}_${i}`,
+				label: s.dimension.toUpperCase(),
+				prompt: prompt,
+				options: s.suggestions.map((opt: string) => ({
+					value: opt.toLowerCase(),
+					label: opt,
+				})),
+				allowOther: true,
+				mode: 'single'
+			};
+		});
 	}
 
 	private async runQuestionnaire(questions: Question[], ctx: ExtensionContext): Promise<any> {

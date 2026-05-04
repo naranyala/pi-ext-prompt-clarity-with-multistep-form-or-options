@@ -22,7 +22,7 @@ describe("Core Service: FloatingContext", () => {
     });
 
     it("should return true when user confirms", async () => {
-      (ctx.ui.confirm as vi.SpiedFunction<any>).mockResolvedValue(true);
+      (ctx.ui.confirm as any<any>).mockResolvedValue(true);
 
       const result = await floatingContext.confirmDangerousAction(ctx, "delete all");
 
@@ -30,7 +30,7 @@ describe("Core Service: FloatingContext", () => {
     });
 
     it("should return false when user denies", async () => {
-      (ctx.ui.confirm as vi.SpiedFunction<any>).mockResolvedValue(false);
+      (ctx.ui.confirm as any<any>).mockResolvedValue(false);
 
       const result = await floatingContext.confirmDangerousAction(ctx, "format c:");
 

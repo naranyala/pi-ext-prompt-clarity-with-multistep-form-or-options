@@ -18,6 +18,6 @@
     "noImplicitAny": false,
     "noImplicitThis": false
   },
-  "include": ["src/**/*.ts", "examples/**/*.ts", "templates/**/*.ts"],
+  "include": ["src/**/*.ts", "examples/**/*.ts", "templates/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

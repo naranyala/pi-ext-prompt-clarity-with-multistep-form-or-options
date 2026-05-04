@@ -17,7 +17,7 @@ describe("Core Service: ConfigValidator", () => {
 
   it("should return the correct config values from flags", () => {
     // Mock the return value of getFlag for this test
-    (api.getFlag as vi.SpiedFunction<any>).mockImplementation((flagName: string) => {
+    (api.getFlag as any<any>).mockImplementation((flagName: string) => {
       if (flagName === FLAG_USERNAME) return "Tester";
       return true;
     });

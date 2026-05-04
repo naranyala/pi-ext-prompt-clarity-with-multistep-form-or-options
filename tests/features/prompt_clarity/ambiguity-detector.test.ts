@@ -1,6 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { AmbiguityDetector } from "../../../src/features/prompt_clarity/ambiguity-detector";
 import { createMockApi, createMockContext } from "../../mocks";
+
+// Mock child_process to force Rust CLI failure, use TS heuristics
+mock.module("child_process", () => ({
+  execSync: mock().mockImplementation(() => {
+    throw new Error("Mocked CLI failure");
+  }),
+}));
 
 // Define Key constants manually since we are mocking the whole module
 const Key = {
@@ -16,20 +23,20 @@ const Key = {
 
 // Mock Editor to capture onSubmit
 let capturedOnSubmit: ((val: string) => void) | null = null;
-vi.mock("@mariozechner/pi-tui", () => {
-  return {
-    Key: Key,
-    matchesKey: (data: string, key: string) => data === key,
-    truncateToWidth: (s: string, w: number) => s.substring(0, w),
-    Editor: vi.fn().mockImplementation(() => ({
-      handleInput: vi.fn(),
-      setText: vi.fn(),
-      render: vi.fn().mockReturnValue([]),
-      set onSubmit(fn: any) {
-        capturedOnSubmit = fn;
-      },
-    })),
-  };
+mock.module("@mariozechner/pi-tui", () => {
+   return {
+     Key: Key,
+     matchesKey: (data: string, key: string) => data === key,
+     truncateToWidth: (s: string, w: number) => s.substring(0, w),
+     Editor: mock().mockImplementation(() => ({
+       handleInput: mock(),
+       setText: mock(),
+       render: mock().mockReturnValue([]),
+       set onSubmit(fn: any) {
+         capturedOnSubmit = fn;
+       },
+     })),
+   };
 });
 
 describe("AmbiguityDetector", () => {

@@ -1,17 +1,9 @@
-/**
- * Ambiguity Detector
- * 
- * Analyzes user input to detect vagueness and triggers a clarification request.
- */
 import type { ExtensionContext, ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { VaguenessDimension, type AmbiguityReport } from "./types";
+import { execSync } from "child_process";
+import path from "path";
 
 export class AmbiguityDetector {
-    private readonly VAGUE_KEYWORDS = {
-        high: ["whatever", "something", "somehow", "anywhere", "anyway"],
-        medium: ["maybe", "probably", "approx", "roughly", "basically", "etc", "and so on", "a few", "a couple"],
-    };
-
     constructor(private readonly api: ExtensionAPI) {}
 
     register() {
@@ -29,7 +21,6 @@ export class AmbiguityDetector {
                     "warning"
                 );
             } else if (report.score >= 0.2) {
-                // Soft hint, doesn't interrupt as much
                 ctx.ui.notify(
                     `Tip: You can use /clarify if you want to be more specific about your requirements.`, 
                     "info"
@@ -39,92 +30,71 @@ export class AmbiguityDetector {
     }
 
     /**
-     * Analyzes the input for vagueness score and dimensions.
+     * Analyzes the input for vagueness score and dimensions using the Rust CLI engine,
+     * falling back to TypeScript heuristics if the CLI fails.
      */
-    private analyzeAmbiguity(text: string): AmbiguityReport {
-        const score = this.calculateVaguenessScore(text);
-        const dimensions = this.detectDimensions(text);
-        
-        return {
-            score,
-            dimensions,
-            isAmbiguous: score >= 0.2
-        };
+    public analyzeAmbiguity(text: string): AmbiguityReport {
+        try {
+            const cliPath = path.join(process.cwd(), "cli-rs", "target", "release", "pi-clarity-cli");
+            const output = execSync(
+                `"${cliPath}" score --text ${JSON.stringify(text)}`, 
+                { encoding: 'utf8' }
+            );
+
+            const parsed = JSON.parse(output);
+
+            return {
+                score: parsed.score ?? 0,
+                dimensions: (parsed.dimensions || []).map((d: string) => d as VaguenessDimension),
+                isAmbiguous: (parsed.score ?? 0) >= 0.2
+            };
+        } catch (error) {
+            console.warn("Rust ambiguity detector failed, falling back to TypeScript heuristics:", error);
+            return this.analyzeAmbiguityTS(text);
+        }
     }
 
     /**
-     * Calculates a vagueness score from 0.0 (precise) to 1.0 (very vague).
+     * Fallback TypeScript implementation of ambiguity detection.
      */
-    private calculateVaguenessScore(text: string): number {
+    private analyzeAmbiguityTS(text: string): AmbiguityReport {
         const normalized = text.toLowerCase();
         const words = normalized.split(/\s+/).filter(Boolean);
         let score = 0;
 
-        // 1. Length Penalty (Short prompts are often vague)
         if (words.length < 3) score += 0.5;
         else if (words.length < 8) score += 0.2;
 
-        // 2. Keyword Penalty
-        let highVagueMatches = 0;
-        for (const kw of this.VAGUE_KEYWORDS.high) {
-            const regex = new RegExp(`\\b${kw}\\b`, 'gi');
-            const matches = normalized.match(regex);
-            if (matches) highVagueMatches += matches.length;
-        }
+        const highVague = ["whatever", "something", "somehow", "anywhere", "anyway"];
+        const medVague = ["maybe", "probably", "approx", "roughly", "basically", "etc", "and so on", "a few", "a couple"];
 
-        let medVagueMatches = 0;
-        for (const kw of this.VAGUE_KEYWORDS.medium) {
-            const regex = new RegExp(`\\b${kw}\\b`, 'gi');
-            const matches = normalized.match(regex);
-            if (matches) medVagueMatches += matches.length;
-        }
-        
-        score += highVagueMatches * 0.3;
-        score += medVagueMatches * 0.15;
+        highVague.forEach(kw => {
+            const matches = normalized.match(new RegExp(`\\b${kw}\\b`, 'gi'));
+            if (matches) score += matches.length * 0.3;
+        });
 
-        // 3. Structural Gaps (Simple heuristic: lack of punctuation/connectors)
+        medVague.forEach(kw => {
+            const matches = normalized.match(new RegExp(`\\b${kw}\\b`, 'gi'));
+            if (matches) score += matches.length * 0.15;
+        });
+
         if (!normalized.includes(".") && !normalized.includes(",") && words.length > 5) {
             score += 0.1;
         }
 
-        return Math.min(1.0, score);
-    }
-
-    /**
-     * Detects which dimensions of vagueness are present using heuristics.
-     */
-    private detectDimensions(text: string): VaguenessDimension[] {
         const dims: VaguenessDimension[] = [];
-        const normalized = text.toLowerCase();
-
-        // Technology heuristics
         if (/(use|with|via|using|framework|library|stack|language|in react|in rust)/.test(normalized)) {
-            // This is actually a positive sign, but if the user says "using something" it's vague
-            if (/(using something|with whatever|via somehow)/.test(normalized)) {
-                dims.push(VaguenessDimension.TECHNOLOGY);
-            }
+            if (/(using something|with whatever|via somehow)/.test(normalized)) dims.push(VaguenessDimension.TECHNOLOGY);
         }
+        if (/(entire|all|just|this|that|whole|part of|some|any|everything)/.test(normalized)) dims.push(VaguenessDimension.SCOPE);
+        if (/(format|output|as a|list|json|markdown|table|summary|explain)/.test(normalized)) dims.push(VaguenessDimension.FORMAT);
+        if (/(the|that|those|these|it|they|it's|there)/.test(normalized) && !/(the file|the code|the folder)/.test(normalized)) dims.push(VaguenessDimension.CONTEXT);
+        if (/(fix|make|change|update|do|something|whatever)/.test(normalized)) dims.push(VaguenessDimension.INTENT);
 
-        // Scope heuristics
-        if (/(entire|all|just|this|that|whole|part of|some|any|everything)/.test(normalized)) {
-            dims.push(VaguenessDimension.SCOPE);
-        }
-
-        // Format heuristics
-        if (/(format|output|as a|list|json|markdown|table|summary|explain)/.test(normalized)) {
-            dims.push(VaguenessDimension.FORMAT);
-        }
-
-        // Context heuristics
-        if (/(the|that|those|these|it|they|it's|there)/.test(normalized) && !/(the file|the code|the folder)/.test(normalized)) {
-            dims.push(VaguenessDimension.CONTEXT);
-        }
-
-        // Intent heuristics
-        if (/(fix|make|change|update|do|something|whatever)/.test(normalized)) {
-            dims.push(VaguenessDimension.INTENT);
-        }
-
-        return dims;
+        return {
+            score: Math.min(1.0, score),
+            dimensions: dims,
+            isAmbiguous: Math.min(1.0, score) >= 0.2
+        };
     }
 }

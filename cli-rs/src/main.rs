@@ -1,11 +1,8 @@
-mod analysis;
-mod scoring;
-mod types;
-
-use analysis::SemanticAnalyzer;
-use anyhow::Result;
+use pi_clarity_cli::analysis::SemanticAnalyzer;
+use pi_clarity_cli::scoring::ScoringEngine;
 use clap::{Parser, Subcommand};
-use scoring::ScoringEngine;
+use serde::{Deserialize, Serialize};
+use anyhow::{Result, Context};
 use std::env;
 
 #[derive(Parser)]
@@ -38,6 +35,13 @@ enum Commands {
     },
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AmbiguityReport {
+    pub score: f64,
+    pub dimensions: Vec<String>,
+    pub is_ambiguous: bool,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -46,22 +50,45 @@ async fn main() -> Result<()> {
         Commands::Score { text } => {
             let engine = ScoringEngine::new();
             let report = engine.analyze(text);
-            println!("{}", serde_json::to_string(&report)?);
+            
+            // Map internal enum to strings for JSON output
+            let dims = report.dimensions.iter().map(|d| format!("{:?}", d).to_lowercase()).collect();
+            
+            let output = AmbiguityReport {
+                score: report.score,
+                dimensions: dims,
+                is_ambiguous: report.is_ambiguous,
+            };
+            println!("{}", serde_json::to_string(&output)?);
         }
-        Commands::Analyze {
-            text,
-            api_key,
-            base_url,
-        } => {
+        Commands::Analyze { text, api_key, base_url } => {
             let key = api_key.clone().unwrap_or_else(|| {
                 env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY must be set")
             });
             let url = base_url.clone();
 
             let analyzer = SemanticAnalyzer::new(key, url, None);
-
+            let engine = ScoringEngine::new(); // Added for verification
+            
             match analyzer.analyze(text).await {
-                Ok(report) => println!("{}", serde_json::to_string(&report)?),
+                Ok(mut report) => {
+                    // TRIGGER: Cross-verify LLM results with deterministic heuristics
+                    let is_verified = engine.verify_llm_report(text, &report);
+                    
+                    if !is_verified {
+                        // Override: If hallucination is suspected, force ambiguity to true
+                        // and increase the score to ensure the TS layer triggers the UI.
+                        report.is_ambiguous = true;
+                        report.score = report.score.max(0.5); 
+                    }
+
+                    let output = AmbiguityReport {
+                        score: report.score,
+                        dimensions: report.dimensions.iter().map(|d| format!("{:?}", d).to_lowercase()).collect(),
+                        is_ambiguous: report.is_ambiguous,
+                    };
+                    println!("{}", serde_json::to_string(&output)?);
+                }
                 Err(e) => {
                     eprintln!("Error during semantic analysis: {}", e);
                     std::process::exit(1);

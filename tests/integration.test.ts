@@ -27,7 +27,7 @@ describe("Integration Test", () => {
 
   it("should correctly run the session_start lifecycle", async () => {
     extension(api);
-    (api.getFlag as vi.SpiedFunction<any>).mockReturnValue("Integ-Tester");
+    (api.getFlag as any<any>).mockReturnValue("Integ-Tester");
 
     await api.__unstable_fireEvent("session_start", {});
 

@@ -1,7 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { AmbiguityDetector } from "../../src/features/prompt_clarity/ambiguity-detector";
 import { PromptClarityAnalyzer } from "../../src/features/prompt_clarity/analyzer";
 import { createMockApi, createMockContext } from "../../tests/mocks";
+
+// Mock Rust CLI to fail, force TS fallback
+mock.module("child_process", () => ({
+  execSync: mock().mockImplementation(() => {
+    throw new Error("Mocked CLI failure");
+  }),
+}));
 
 describe("Input Chaos Stress Tests", () => {
   let api: any;
@@ -64,14 +71,14 @@ describe("Input Chaos Stress Tests", () => {
         extra: largeValue
       });
       
-      api.chat = vi.fn().mockResolvedValue(massiveResponseWithLargeValue);
+      api.chat = mock().mockResolvedValue(massiveResponseWithLargeValue);
       
       const report = await analyzer.analyze("some prompt");
       expect(report.score).toBe(0.9);
     });
 
     it("should handle LLM returning non-string/non-JSON (Garbage Stress)", async () => {
-      api.chat = vi.fn().mockResolvedValue("This is not JSON at all!");
+      api.chat = mock().mockResolvedValue("This is not JSON at all!");
       
       const report = await analyzer.analyze("some prompt");
       // Should fallback to default report instead of crashing

@@ -14,9 +14,10 @@ You have used the 'clarify_prompt' tool to resolve ambiguities in the user's req
 The resulting answers are NOT suggestions; they are HARD CONSTRAINTS.
 
 1. ALWAYS prioritize the explicit answers provided in the clarification questionnaire over any assumptions.
-2. If a user specified a preference (e.g., "Use TypeScript" or "Performance over Readability"), treat it as a requirement.
-3. Do not introduce patterns or technologies that contradict the clarified intent.
-4. If the clarification results are contradictory, ask the user for a final decision before proceeding.
+2. ZERO-ASSUMPTION POLICY: If a dimension (Technology, Scope, Format, Context, or Intent) was identified as missing and the user did NOT provide a specific answer, you are FORBIDDEN from guessing. You must explicitly ask the user to fill that gap before proceeding.
+3. If a user specified a preference (e.g., "Use TypeScript" or "Performance over Readability"), treat it as a requirement.
+4. Do not introduce patterns or technologies that contradict the clarified intent.
+5. If the clarification results are contradictory, ask the user for a final decision before proceeding.
 `;
 
     /**

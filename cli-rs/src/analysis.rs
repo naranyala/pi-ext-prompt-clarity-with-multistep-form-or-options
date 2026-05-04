@@ -45,17 +45,30 @@ impl SemanticAnalyzer {
     pub async fn analyze(&self, prompt: &str) -> Result<AmbiguityReport> {
         let system_prompt = r#"You are an ambiguity analysis expert. 
 Analyze the user's prompt to identify missing information.
-Categorize the missing information into one or more of these dimensions:
+Categorize the missing information into these dimensions:
 - technology: missing tech stack, libraries, or frameworks
 - scope: missing boundaries (file, folder, project)
 - format: missing output requirements (JSON, Markdown, etc.)
 - context: missing reference to existing code or state
 - intent: missing clear goal (fix, refactor, explain)
 
+For each missing dimension, you MUST provide:
+1. A short label explaining what is missing.
+2. 3-4 highly probable suggestions based on the context of the prompt.
+3. EVIDENCE: A specific reason why this is missing. Quote the prompt or explain the logical gap. If you cannot find a clear gap, do NOT include this dimension.
+
 Return ONLY a valid JSON object with this structure:
 {
   "score": number, // 0.0 (precise) to 1.0 (very vague)
-  "dimensions": ["technology", "scope", etc...]
+  "dimensions": ["technology", "scope", etc...],
+  "suggestions": [
+    {
+      "dimension": "technology",
+      "label": "Missing framework specification",
+      "suggestions": ["React", "Vue", "Svelte", "Vanilla JS"],
+      "evidence": "The user mentioned 'web app' but did not specify a frontend library."
+    }
+  ]
 }"#;
 
         let response = self.client

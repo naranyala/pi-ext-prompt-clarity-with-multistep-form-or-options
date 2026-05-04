@@ -6,12 +6,12 @@
  * A good mock is the cornerstone of unit testing. It allows you to:
  *
  *  1. Isolate your code from the main Pi agent.
- *  2. Spy on function calls (e.g., "was `registerTool` called?").
+ *  2, Spy on function calls (e.g., "was `registerTool` called?").
  *  3. Fake return values (e.g., make `getFlag` return `true`).
  *  4. Simulate events (e.g., fire a fake `tool_call` event).
  *
  */
-import { vi } from "bun:test";
+import { mock } from "bun:test";
 import type { ExtensionAPI, ExtensionContext, ExtensionEvent } from "@mariozechner/pi-coding-agent";
 
 // A repository to store registered items so we can inspect them in tests.
@@ -26,15 +26,15 @@ const MOCK_REGISTRY = {
 
 /**
  * Creates a mock `ExtensionContext` object.
- * We use `vi.fn()` to create spies for all UI interaction methods.
+ * We use `mock()` to create spies for all UI interaction methods.
  */
 export function createMockContext(): ExtensionContext {
   return {
     ui: {
-      notify: vi.fn(),
-      confirm: vi.fn().mockResolvedValue(true), // Default to "yes" for confirmation prompts
-      showToast: vi.fn(),
-      setWidget: vi.fn(),
+      notify: mock(),
+      confirm: mock().mockResolvedValue(true), // Default to "yes" for confirmation prompts
+      showToast: mock(),
+      setWidget: mock(),
       // You can add spies for other UI methods here
     },
   } as any;
@@ -54,24 +54,24 @@ export function createMockApi(): ExtensionAPI & { __unstable_getRegistry: () => 
   MOCK_REGISTRY.entries = [];
 
   const api = {
-    log: vi.fn(),
-    registerTool: vi.fn((tool) => MOCK_REGISTRY.tools.set(tool.name, tool)),
-    registerCommand: vi.fn((name, cmd) => MOCK_REGISTRY.commands.set(name, cmd)),
-    on: vi.fn((name, handler) => {
+    log: mock(),
+    registerTool: mock((tool) => MOCK_REGISTRY.tools.set(tool.name, tool)),
+    registerCommand: mock((name, cmd) => MOCK_REGISTRY.commands.set(name, cmd)),
+    on: mock((name, handler) => {
       if (!MOCK_REGISTRY.events.has(name)) MOCK_REGISTRY.events.set(name, []);
       MOCK_REGISTRY.events.get(name)!.push(handler);
     }),
-    registerFlag: vi.fn((name, flag) => MOCK_REGISTRY.flags.set(name, flag)),
-    getFlag: vi.fn((name: string) => MOCK_REGISTRY.flags.get(name)?.default),
-    registerShortcut: vi.fn((shortcut, handler) => MOCK_REGISTRY.shortcuts.set(shortcut, handler)),
-    exec: vi.fn().mockResolvedValue({ stdout: "", stderr: "", exitCode: 0, code: 0 }),
+    registerFlag: mock((name, flag) => MOCK_REGISTRY.flags.set(name, flag)),
+    getFlag: mock((name: string) => MOCK_REGISTRY.flags.get(name)?.default),
+    registerShortcut: mock((shortcut, handler) => MOCK_REGISTRY.shortcuts.set(shortcut, handler)),
+    exec: mock().mockResolvedValue({ stdout: "", stderr: "", exitCode: 0, code: 0 }),
     
     // Mock state management functions
-    getEntries: vi.fn(() => MOCK_REGISTRY.entries),
-    appendEntry: vi.fn((entry) => MOCK_REGISTRY.entries.push(entry)),
+    getEntries: mock(() => MOCK_REGISTRY.entries),
+    appendEntry: mock((entry) => MOCK_REGISTRY.entries.push(entry)),
 
     // Add spies for other API methods you want to test
-    getSessionName: vi.fn().mockReturnValue("test-session"),
+    getSessionName: mock().mockReturnValue("test-session"),
 
     // Special methods for testing
     __unstable_getRegistry: () => MOCK_REGISTRY,

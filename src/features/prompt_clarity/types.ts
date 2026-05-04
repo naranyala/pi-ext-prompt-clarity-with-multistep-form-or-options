@@ -11,11 +11,21 @@ export enum VaguenessDimension {
 }
 
 /**
+ * a la suggested options for a specific dimension.
+ */
+export interface ClarificationSuggestion {
+    dimension: VaguenessDimension;
+    label: string;
+    suggestions: string[];
+}
+
+/**
  * A semantic report of how ambiguous a prompt is.
  */
 export interface AmbiguityReport {
     score: number; // 0.0 to 1.0
     dimensions: VaguenessDimension[];
+    suggestions: ClarificationSuggestion[];
     isAmbiguous: boolean;
 }
 

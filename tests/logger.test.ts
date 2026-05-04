@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "bun:test";
+import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { Logger } from "../src/core/logger";
 import { createMockContext } from "./mocks";
 
@@ -13,7 +13,7 @@ describe("Core Service: Logger", () => {
 
   describe("info()", () => {
     it("should log to console.log with [INFO] prefix", () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const consoleSpy = spyOn(console, "log").mockImplementation(() => {});
       logger.info("Test message");
       expect(consoleSpy).toHaveBeenCalledWith("[INFO] Test message");
       consoleSpy.mockRestore();
@@ -25,7 +25,7 @@ describe("Core Service: Logger", () => {
     });
 
     it("should not call ctx.ui.notify when context is undefined", () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const consoleSpy = spyOn(console, "log").mockImplementation(() => {});
       logger.info("Test message", undefined);
       expect(ctx.ui.notify).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
@@ -34,7 +34,7 @@ describe("Core Service: Logger", () => {
 
   describe("warn()", () => {
     it("should log to console.warn with [WARN] prefix", () => {
-      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const consoleSpy = spyOn(console, "warn").mockImplementation(() => {});
       logger.warn("Warning message");
       expect(consoleSpy).toHaveBeenCalledWith("[WARN] Warning message");
       consoleSpy.mockRestore();
@@ -48,7 +48,7 @@ describe("Core Service: Logger", () => {
 
   describe("error()", () => {
     it("should log to console.error with [ERROR] prefix", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       logger.error("Error message");
       expect(consoleSpy).toHaveBeenCalledWith("[ERROR] Error message");
       consoleSpy.mockRestore();
@@ -61,14 +61,14 @@ describe("Core Service: Logger", () => {
   });
 
   it("should handle empty string messages", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = spyOn(console, "log").mockImplementation(() => {});
     logger.info("");
     expect(consoleSpy).toHaveBeenCalledWith("[INFO] ");
     consoleSpy.mockRestore();
   });
 
   it("should handle messages with special characters", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = spyOn(console, "log").mockImplementation(() => {});
     logger.info("Message with `backticks` and $variable");
     expect(consoleSpy).toHaveBeenCalledWith("[INFO] Message with `backticks` and $variable");
     consoleSpy.mockRestore();

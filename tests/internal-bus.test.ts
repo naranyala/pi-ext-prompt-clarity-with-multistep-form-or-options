@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { InternalBus } from "../src/core/internal-bus";
 
 describe("Core Service: InternalBus", () => {
@@ -10,15 +10,15 @@ describe("Core Service: InternalBus", () => {
 
   describe("on() - subscribe", () => {
     it("should register a listener for a new event type", () => {
-      const handler = vi.fn();
+      const handler = mock();
       const unsubscribe = bus.on("test_event", handler);
       
       expect(typeof unsubscribe).toBe("function");
     });
 
     it("should allow subscribing multiple handlers to the same event type", () => {
-      const handler1 = vi.fn();
-      const handler2 = vi.fn();
+      const handler1 = mock();
+      const handler2 = mock();
       bus.on("test_event", handler1);
       bus.on("test_event", handler2);
       
@@ -29,8 +29,8 @@ describe("Core Service: InternalBus", () => {
     });
 
     it("should allow subscribing to multiple different event types", () => {
-      const handlerA = vi.fn();
-      const handlerB = vi.fn();
+      const handlerA = mock();
+      const handlerB = mock();
       bus.on("event_a", handlerA);
       bus.on("event_b", handlerB);
       
@@ -44,7 +44,7 @@ describe("Core Service: InternalBus", () => {
 
   describe("emit()", () => {
     it("should call all handlers registered for the event type", async () => {
-      const handler = vi.fn();
+      const handler = mock();
       bus.on("test_event", handler);
       
       await bus.emit("test_event", { data: "test" });
@@ -53,7 +53,7 @@ describe("Core Service: InternalBus", () => {
     });
 
     it("should handle async handlers", async () => {
-      const asyncHandler = vi.fn().mockImplementation(async () => {
+      const asyncHandler = mock().mockImplementation(async () => {
         await new Promise(r => setTimeout(r, 10));
       });
       bus.on("async_event", asyncHandler);
@@ -64,7 +64,7 @@ describe("Core Service: InternalBus", () => {
     });
 
     it("should handle sync handlers without returning a promise", async () => {
-      const syncHandler = vi.fn();
+      const syncHandler = mock();
       bus.on("sync_event", syncHandler);
       
       const result = await bus.emit("sync_event", "data");
@@ -83,8 +83,8 @@ describe("Core Service: InternalBus", () => {
     });
 
     it("should handle multiple handlers on same event type", async () => {
-      const handler1 = vi.fn();
-      const handler2 = vi.fn();
+      const handler1 = mock();
+      const handler2 = mock();
       bus.on("multi", handler1);
       bus.on("multi", handler2);
       
@@ -96,7 +96,7 @@ describe("Core Service: InternalBus", () => {
 
     it("should pass typed payloads correctly", async () => {
       interface TestPayload { id: number; name: string }
-      const handler = vi.fn();
+      const handler = mock();
       bus.on<TestPayload>("typed_event", handler);
       
       const payload: TestPayload = { id: 1, name: "test" };
@@ -108,7 +108,7 @@ describe("Core Service: InternalBus", () => {
 
   describe("unsubscribe", () => {
     it("should return a function that removes the listener", async () => {
-      const handler = vi.fn();
+      const handler = mock();
       const unsubscribe = bus.on("remove_event", handler);
       
       unsubscribe();
@@ -118,9 +118,9 @@ describe("Core Service: InternalBus", () => {
     });
 
     it("should allow multiple handlers to coexist", async () => {
-      const handlerA = vi.fn();
-      const handlerB = vi.fn();
-      const handlerC = vi.fn();
+      const handlerA = mock();
+      const handlerB = mock();
+      const handlerC = mock();
       
       bus.on("coexist", handlerA);
       bus.on("coexist", handlerB);
@@ -144,7 +144,7 @@ describe("Core Service: InternalBus", () => {
     });
 
     it("should be safe to call unsubscribe multiple times", () => {
-      const handler = vi.fn();
+      const handler = mock();
       const unsub = bus.on("double_remove", handler);
       
       unsub();
@@ -156,7 +156,7 @@ describe("Core Service: InternalBus", () => {
 
   describe("edge cases", () => {
     it("should handle emitting with null payload", async () => {
-      const handler = vi.fn();
+      const handler = mock();
       bus.on("null_event", handler);
       
       await bus.emit("null_event", null);
@@ -165,7 +165,7 @@ describe("Core Service: InternalBus", () => {
     });
 
     it("should handle emitting with undefined payload", async () => {
-      const handler = vi.fn();
+      const handler = mock();
       bus.on("undefined_event", handler);
       
       await bus.emit("undefined_event", undefined);
@@ -174,7 +174,7 @@ describe("Core Service: InternalBus", () => {
     });
 
     it("should handle emitting with empty object payload", async () => {
-      const handler = vi.fn();
+      const handler = mock();
       bus.on("empty_event", handler);
       
       await bus.emit("empty_event", {});
@@ -183,7 +183,7 @@ describe("Core Service: InternalBus", () => {
     });
 
     it("should handle empty string event type", async () => {
-      const handler = vi.fn();
+      const handler = mock();
       bus.on("", handler);
       
       await bus.emit("", {});
